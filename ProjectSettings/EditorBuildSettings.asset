@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/websocket.unity
-    guid: 528d88c3fbf09465298964cd7850783b
+    path: Assets/SimpleTouchController/Scenes/Example2.unity
+    guid: c3cd371040bb39f41bcbc6116372b529
   m_configObjects: {}
