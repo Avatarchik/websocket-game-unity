@@ -57,6 +57,7 @@ public class ConnectionAgent : MonoBehaviour
     {
         string s = string.Format("{0}:{1}", cmd, data);
         connection.SendStr(s);
+        Debug.Log("<color=green>" + "send to server=" + s + "</color>");
     }
 
     public string ParseVectorToString(Vector3 v)
@@ -151,7 +152,7 @@ public class ConnectionAgent : MonoBehaviour
         {
             try
             {
-                Debug.Log("<color=yellow>" + str + "</color>");
+                Debug.Log("<color=yellow>" + "recv from server=" + str + "</color>");
 
                 string[] strSplit = str.Split(':');
                 string cmd = strSplit[0];

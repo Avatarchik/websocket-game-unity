@@ -8,6 +8,9 @@ public class Player : MonoBehaviour
     public string playerName;
     public float playerHp = 0f;
 
+    public TextMesh playerNameMesh;
+    public TextMesh playerIdMesh;
+
     private Vector3 lastPos = Vector3.zero;
     private Vector3 lastEuler = Vector3.zero;
     private Vector3 lastScale = Vector3.one;
@@ -60,5 +63,7 @@ public class Player : MonoBehaviour
     void Update()
     {
         //UpdateNetTransform();
+        playerNameMesh.text = playerName;
+        playerIdMesh.text = playerId.ToString();
     }
 }

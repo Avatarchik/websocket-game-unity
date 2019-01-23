@@ -5,11 +5,11 @@ using UnityEngine;
 public class Bot : MonoBehaviour
 {
     public string[] playerNameDefault = {
-        "大雄",
-        "多拉A夢",
-        "胖虎",
-        "小夫",
-        "靜香",
+        "Bot_ABC",
+        "Bot_DEF",
+        "Bot_GHI",
+        "Bot_JKL",
+        "Bot_MNO",
     };
     public float playerInitHp = 10f;
 
@@ -19,6 +19,7 @@ public class Bot : MonoBehaviour
 
     private WebsocketConnection websocketConnection;
     private ConnectionAgent connectionAgent;
+    private Game game;
 
     public enum State
     {
@@ -46,6 +47,9 @@ public class Bot : MonoBehaviour
     Vector3 botEuler = Vector3.zero;
     Vector3 botScale = Vector3.one;
 
+    //public Player botPlayer = null;
+    //public PlayerMove botPlayerMove = null;
+
     float botIdleTimer = 0f;
     float botIdleToMoveWaitSeconds = 0f;
 
@@ -58,8 +62,6 @@ public class Bot : MonoBehaviour
 
     void OnSocketOpen(string data)
     {
-        connectionAgent.UnregisterCmdHandler(Cmd.socket_open);
-
         mySocketId = int.Parse(data);
         myPlayerId = mySocketId; // 用mySocketId當作playerId
 
@@ -70,6 +72,7 @@ public class Bot : MonoBehaviour
     {
         PlayerSpawnPoint psp = GameObject.FindObjectOfType<PlayerSpawnPoint>();
         Vector3 bornPos = psp.GetSpawnPoint();
+        bornPos.y = 1.58f;
 
         string data = string.Format(
             "{0}|{1}|{2}|{3},{4},{5}|0,0,0|1,1,1",
@@ -83,8 +86,6 @@ public class Bot : MonoBehaviour
 
     void OnPlayerJoinDone(string data)
     {
-        connectionAgent.UnregisterCmdHandler(Cmd.player_join_done);
-
         string[] dataSplit = data.Split('|');
 
         // player_join_done:0|大中天|10|1.2,1.2,1.2|0,0,0|1,1,1
@@ -108,30 +109,6 @@ public class Bot : MonoBehaviour
             state = State.AuotPlaying;
         }
     }
-
-    //void OnPlayerTransform(string data)
-    //{
-    //    // # (both) 更新玩家位置:玩家id|localPosition|localRotation|localScale
-    //    string[] dataSplit = data.Split('|');
-
-    //    int playerId = int.Parse(dataSplit[0]);
-    //    if (playerId == myPlayerId)
-    //    {
-    //        /*
-    //                Vector3 pos = connectionAgent.ParseStringToVector(dataSplit[1]);
-    //                Vector3 rot = connectionAgent.ParseStringToVector(dataSplit[2]);
-    //                Vector3 sca = connectionAgent.ParseStringToVector(dataSplit[3]);
-    //                transform.position = pos;
-    //                transform.eulerAngles = rot;
-    //                transform.localScale = sca;
-    //        */
-    //        return;
-    //    }
-    //    else
-    //    {
-    //        return;
-    //    }
-    //}
 
     void UpdateState()
     {
@@ -184,9 +161,9 @@ public class Bot : MonoBehaviour
         {
             case AuotPlayingState.Init:
                 {
-                    botPosition = Vector3.zero;
-                    botEuler = Vector3.zero;
-                    botScale = Vector3.one;
+                    //botPosition = Vector3.zero;
+                    //botEuler = Vector3.zero;
+                    //botScale = Vector3.one;
 
                     botIdleTimer = 0f;
                     botIdleToMoveWaitSeconds = 0f;
@@ -222,15 +199,17 @@ public class Bot : MonoBehaviour
                         botMoveVector = new Vector3(Random.Range(-1, 1), 0f, Random.Range(-1, 1));
                         botMoveVector.Normalize();
 
-                        botMoveSpeed = 3f * Time.deltaTime;
+                        botMoveSpeed = 2f;
                         botMoveTimer = 0f;
                         botMoveToIdleWaitSeconds = Random.Range(3f, 6f);
+
+                        botMoveVector = botMoveVector * botMoveSpeed * Time.deltaTime;
                         break;
                     }
 
                     botMoveTimer += Time.deltaTime;
-                    botPosition += botMoveVector * botMoveSpeed;
 
+                    botPosition += botMoveVector;
                     // # (both) 更新玩家位置:玩家id|localPosition|localRotation|localScale
                     string data = string.Format(
                         "{0}|{1}|{2}|{3}",
@@ -256,6 +235,8 @@ public class Bot : MonoBehaviour
         connectionAgent = gameObject.AddComponent<ConnectionAgent>();
 
         connectionAgent.connection = websocketConnection;
+
+        game = GameObject.FindObjectOfType<Game>();
     }
 
     void Update()

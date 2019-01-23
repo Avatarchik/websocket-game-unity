@@ -1,26 +1,40 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Game : MonoBehaviour
 {
+    public Toggle autoPlayToggle;
+    public bool autoPlay = false;
+
     public string[] playerNameDefault = {
-        "中華一番之滿漢傳奇",
-        "怪醫黑傑克",
-        "金田一少年事件簿",
-        "神風怪盜貞德",
-        "愛情火辣辣",
-        "美少女戰士"
+        "蕭敬騰",
+        "蔡依林",
+        "周杰倫",
+        "伊能靜",
+        "王力宏",
+        "林依晨"
     };
     public float playerInitHp = 10f;
 
     public ConnectionAgent connectionAgent;
 
     public Player playerPrefab;
-    private Player me;
+    public Player me;
     public int mySocketId = -1;
 
     private List<Player> playersInScene = new List<Player>();
+
+    public Player GetPlayerById(int playerId)
+    {
+        foreach (Player p in playersInScene)
+        {
+            if (p.playerId == playerId)
+                return p;
+        }
+        return null;
+    }
 
     public void OpenSocket()
     {
@@ -32,51 +46,12 @@ public class Game : MonoBehaviour
         // 表示第一次連上server，把這個socket當成玩家自己
         if (mySocketId == -1)
         {
-            int.TryParse(data, out mySocketId);
+            mySocketId = int.Parse(data);
         }
-        StartCoroutine(PlayerJoin());
+        StartCoroutine(JoinTheGame());
     }
 
-    void OnPlayerTransform(string data)
-    {
-        // # (both) 更新玩家位置:玩家id|localPosition|localRotation|localScale
-        string[] dataSplit = data.Split('|');
-
-        bool ignore = false;
-        int playerId = int.Parse(dataSplit[0]);
-        if (me != null)
-        {
-            if (me.playerId == playerId)
-            {
-                ignore = true;
-            }
-        }
-
-        if (ignore)
-        {
-            return;
-        }
-        else
-        {
-            for (int i = 0; i < playersInScene.Count; i++)
-            {
-                if (playersInScene[i] == null)
-                    continue;
-
-                if (playersInScene[i].playerId == playerId)
-                {
-                    Vector3 pos = connectionAgent.ParseStringToVector(dataSplit[1]);
-                    Vector3 rot = connectionAgent.ParseStringToVector(dataSplit[2]);
-                    Vector3 sca = connectionAgent.ParseStringToVector(dataSplit[3]);
-                    playersInScene[i].transform.position = pos;
-                    playersInScene[i].transform.eulerAngles = rot;
-                    playersInScene[i].transform.localScale = sca;
-                }
-            }
-        }
-    }
-
-    IEnumerator PlayerJoin()
+    IEnumerator JoinTheGame()
     {
         yield return new WaitForEndOfFrame();
 
@@ -120,19 +95,77 @@ public class Game : MonoBehaviour
                 GameObject.Destroy(me.gameObject);
             }
             me = newPlayer;
-            PlayerHead ph =  me.gameObject.AddComponent<PlayerHead>();
 
-            PlayerMove pm = me.gameObject.AddComponent<PlayerMove>();
-            pm.groundLayer = LayerMask.GetMask("Default");
+            me.gameObject.AddComponent<PlayerGravity>();
+            me.name = "ME";
+
+            SyncTransformToEveryone nst = me.gameObject.AddComponent<SyncTransformToEveryone>();
+            nst.Init(newPlayer.playerId, connectionAgent);
+
+            PlayerMove pm = me.gameObject.GetComponent<PlayerMove>();
+            Joypad joypad = GameObject.FindObjectOfType<Joypad>();
+            joypad.onPointerEventW.onPress.AddListener(pm.GoForward);
+            joypad.onPointerEventS.onPress.AddListener(pm.GoBackward);
+            joypad.onPointerEventA.onPress.AddListener(pm.GoLeft);
+            joypad.onPointerEventD.onPress.AddListener(pm.GoRight);
+            joypad.onPointerEventQ.onPress.AddListener(pm.TurnLeft);
+            joypad.onPointerEventE.onPress.AddListener(pm.TurnRight);
+            joypad.testAutoPlay = autoPlay;
         }
         else
         {
-            GameObject.Destroy(newPlayer.GetComponent<AudioListener>());
-            GameObject.Destroy(newPlayer.GetComponent<FlareLayer>());
-            GameObject.Destroy(newPlayer.GetComponent<Camera>());
+            GameObject.Destroy(newPlayer.GetComponentInChildren<AudioListener>());
+            GameObject.Destroy(newPlayer.GetComponentInChildren<FlareLayer>());
+            GameObject.Destroy(newPlayer.GetComponentInChildren<Camera>());
+            newPlayer.gameObject.GetComponent<PlayerMove>().enabled = false;
+            newPlayer.gameObject.GetComponent<CharacterController>().enabled = false;
+
+            newPlayer.gameObject.AddComponent<LerpPosition>();
         }
 
         playersInScene.Add(newPlayer);
+    }
+
+    void OnPlayerTransform(string data)
+    {
+        // # (both) 更新玩家位置:玩家id|localPosition|localRotation|localScale
+        string[] dataSplit = data.Split('|');
+
+        bool ignore = false;
+        int playerId = int.Parse(dataSplit[0]);
+        if (me != null)
+        {
+            if (me.playerId == playerId)
+            {
+                ignore = true;
+            }
+        }
+
+        if (ignore)
+        {
+            return;
+        }
+        else
+        {
+            for (int i = 0; i < playersInScene.Count; i++)
+            {
+                if (playersInScene[i] == null)
+                    continue;
+
+                if (playersInScene[i].playerId == playerId)
+                {
+                    Vector3 pos = connectionAgent.ParseStringToVector(dataSplit[1]);
+                    Vector3 rot = connectionAgent.ParseStringToVector(dataSplit[2]);
+                    Vector3 sca = connectionAgent.ParseStringToVector(dataSplit[3]);
+
+                    LerpPosition lp = playersInScene[i].GetComponent<LerpPosition>();
+                    lp.targetPosition = pos;
+                    //playersInScene[i].transform.position = pos;
+                    playersInScene[i].transform.eulerAngles = rot;
+                    playersInScene[i].transform.localScale = sca;
+                }
+            }
+        }
     }
 
     void Start()
@@ -144,9 +177,9 @@ public class Game : MonoBehaviour
 
     void Update()
     {
-        if (me != null)
+        if (autoPlayToggle != null)
         {
-            //me.GetComponent<PlayerMove>().groundLayer = LayerMask.GetMask("Default");
+            autoPlay = autoPlayToggle.isOn;
         }
     }
 }
