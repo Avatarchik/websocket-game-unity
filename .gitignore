@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# My
+Build/
+
 # Unity
 Library/
 Temp/
@@ -12,6 +15,7 @@ Temp/
 *.user
 *.userosscache
 *.sln.docstates
+*.csproj
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
